@@ -1,0 +1,6 @@
+{"file":".trellis/spec/backend/index.md","reason":"后端规范入口与质量检查上下文；具体平台事实以调研文件为准"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"跨入口、协议、传输、存储与管理面的边界检查"}
+{"file":".trellis/tasks/11-18-cloudflare-workers-deployment-research/research/current-runtime-inventory.md","reason":"现有运行时约束、可复用边界与代码行号证据"}
+{"file":".trellis/tasks/11-18-cloudflare-workers-deployment-research/research/workers-implementation-brief.md","reason":"精简且完整的 Workers 官方约束、状态边界与验证清单；完整平台矩阵见同名目录 platform-capabilities 报告"}
+{"file":".trellis/tasks/11-18-cloudflare-workers-deployment-research/research/deployment-options.md","reason":"推荐路线、候选组件、一致性边界与验证关卡"}
+{"file": ".trellis/tasks/11-18-cloudflare-workers-deployment-research/research/verification-results.md", "reason": "实际部署、协议、状态和管理页面验证结果"}

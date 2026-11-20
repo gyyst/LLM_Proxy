@@ -240,6 +240,16 @@
 - `response_guard` 返回 `None` 表示保留当前响应体；新增 Hook 时要注意返回值约定。
 - 认证 Session、用户 IP 缓存、Provider 映射和 Hook 缓存都在单进程内存中，不适合多实例部署。
 
+## Cloudflare Workers 部署形态
+
+- `workers/entry.py` 是 Workers 入口；`workers/app.py` 区分同源管理面和 `/v1/*` 数据面。
+- Workers 管理面由 Flask WSGI 适配器承载，数据面使用原生 async fetch 与 Streams；不得在请求路径导入 gevent、requests、paramiko 或 SQLite 文件实现。
+- D1 保存配置、日志和统计，Durable Objects 保存 Key、Auth Group、模型映射和 OAuth 账号的一致性状态，R2 保存 LLM 记录；不要用 isolate 全局变量替代共享状态。
+- Agent 本机 / SSH 配置不属于 Workers 形态。
+- Workers 入口通过 `npm run deploy` 构建；该命令先同步 Python 包、构建前端并刷新 `workers/src`、`workers/hooks` 与 `workers/static`，再调用 `cf deploy`。不要直接运行 `cf deploy` 代替完整构建。
+- Workers 专用依赖锁为 `pylock.toml`，由 `uv run python scripts/lock_workers.py` 更新；不要把 Linux 后端依赖加入 Workers 锁。
+- 部署、验证和平台边界见 `docs/cloudflare-workers.md`。
+
 ## 文档编写与同步
 ### 内容原则
 - 文档描述当前版本可验证的行为、能力和约束，使用“支持”“默认”“需要”“仅”“不适用于”等正面、直接的事实陈述。
@@ -273,3 +283,24 @@
   - Hook 机制变化
   - 部署拓扑变化
 - 如果代码提交没有修改 4+1 图，变更说明中需要明确声明“架构未变化”。
+<!-- TRELLIS:START -->
+# Trellis Instructions
+
+These instructions are for AI assistants working in this project.
+
+This project is managed by Trellis. The working knowledge you need lives under `.trellis/`:
+
+- `.trellis/workflow.md` — development phases, when to create tasks, skill routing
+- `.trellis/spec/` — package- and layer-scoped coding guidelines (read before writing code in a given layer)
+- `.trellis/workspace/` — per-developer journals and session traces
+- `.trellis/tasks/` — active and archived tasks (PRDs, research, jsonl context)
+
+If a Trellis command is available on your platform (e.g. `/trellis:finish-work`, `/trellis:continue`), prefer it over manual steps. Not every platform exposes every command.
+
+If you're using Codex or another agent-capable tool, additional project-scoped helpers may live in:
+- `.agents/skills/` — reusable Trellis skills
+- `.codex/agents/` — optional custom subagents
+
+Managed by Trellis. Edits outside this block are preserved; edits inside may be overwritten by a future `trellis update`.
+
+<!-- TRELLIS:END -->
