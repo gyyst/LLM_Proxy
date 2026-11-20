@@ -13,6 +13,7 @@ from typing import Any
 
 from flask import Flask, Response, jsonify, request
 from gateway_runtime.http import HttpError
+from gateway_runtime.model_test import build_model_test_request, model_test_failure, model_test_result
 from gateway_runtime.services import (
     GatewayServices,
     _maybe_await,
@@ -1467,16 +1468,11 @@ def _provider_from_request(body: dict[str, Any] | None = None) -> dict[str, Any]
 
 
 async def _test_upstream_model(provider: dict[str, Any], model: str, env: Any) -> dict[str, Any]:
-    """使用实际 HTTP 请求测试模型，而不是只检查配置。"""
-    started = time.time()
-    source = provider.get("source_format", "openai_chat")
-    if source == "openai_responses":
-        body = {"model": model, "input": "Hello", "max_output_tokens": 8, "stream": False}
-    elif source == "claude_chat":
-        body = {"model": model, "messages": [{"role": "user", "content": "Hello"}], "max_tokens": 8, "stream": False}
-    else:
-        body = {"model": model, "messages": [{"role": "user", "content": "Hello"}], "max_tokens": 8, "stream": False}
-    headers = {"Content-Type": "application/json"}
+    """使用实际 HTTP 请求测试模型，并按 usage 计算输出 TPS。"""
+    started = time.perf_counter()
+    source = str(provider.get("source_format") or "openai_chat")
+    body = build_model_test_request(source, model)
+    headers = {"Content-Type": "application/json", "Accept": "application/json"}
     auth_entry = _find_auth_entry(provider)
     if auth_entry:
         headers.update(auth_entry.get("headers") or {})
@@ -1487,36 +1483,26 @@ async def _test_upstream_model(provider: dict[str, Any], model: str, env: Any) -
 
         endpoint = _upstream_api_endpoint(str(provider.get("api") or ""), source)
         response = await open_upstream(endpoint, headers, body, env)
-        latency = int((time.time() - started) * 1000)
         if response.status >= 400:
             detail = (await response.text()).strip()[:300]
-            return {
-                "requested_model": model,
-                "available": False,
-                "first_token_latency_ms": None,
-                "tps": None,
-                "response_model": None,
-                "error": f"HTTP {response.status}{f': {detail}' if detail else ''}",
-            }
-        payload = await response.json()
-        response_model = payload.get("model") if isinstance(payload, dict) else None
-        return {
-            "requested_model": model,
-            "available": True,
-            "first_token_latency_ms": latency,
-            "tps": None,
-            "response_model": response_model,
-            "error": None,
-        }
+            return model_test_failure(
+                model,
+                f"HTTP {response.status}{f': {detail}' if detail else ''}",
+            )
+        raw = await response.text()
+        duration_ms = max((time.perf_counter() - started) * 1000, 0)
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError:
+            return model_test_failure(model, "Upstream returned non-JSON content")
+        return model_test_result(
+            model=model,
+            source_format=source,
+            payload=payload,
+            duration_ms=duration_ms,
+        )
     except Exception as exc:
-        return {
-            "requested_model": model,
-            "available": False,
-            "first_token_latency_ms": None,
-            "tps": None,
-            "response_model": None,
-            "error": str(exc),
-        }
+        return model_test_failure(model, str(exc))
 
 
 def _find_auth_entry(provider: dict[str, Any]) -> dict[str, Any] | None:
