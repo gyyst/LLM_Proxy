@@ -151,6 +151,7 @@ When downstream API key management is enabled, requests must include `Authorizat
 | Document | Contents |
 | --- | --- |
 | [Full User Guide (Chinese)](docs/user-guide.md) | Providers, Auth Groups, OAuth, Hooks, redaction, and configuration reference |
+| [Cloudflare Workers Deployment](docs/cloudflare-workers.md) | Workers architecture, D1/Durable Objects/R2, deployment, verification, and platform boundaries |
 | [Agent Configuration](docs/agent-configuration.md) | Declarative Agent extensions, file formats, paths, SSH, and parameters |
 | [Provider Model Testing](docs/provider-model-testing.md) | Test workflow, metric definitions, and behavior boundaries |
 | [Statistics Design](docs/statistics-design.md) | Request observations, aggregation, cache, and performance metrics |

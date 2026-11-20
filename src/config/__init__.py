@@ -4,8 +4,9 @@
 
 from typing import TYPE_CHECKING
 
-from .config_manager import ConfigManager
-from .model_mapping_config import ModelMappingSchema, ModelMappingTargetSchema
+if TYPE_CHECKING:
+    from .auth_group_manager import AuthGroupManager
+    from .config_manager import ConfigManager
 from .provider_config import (
     AuthEntrySchema,
     AuthGroupSchema,
@@ -43,6 +44,14 @@ __all__ = [
 
 
 def __getattr__(name: str):
+    if name == "ConfigManager":
+        from .config_manager import ConfigManager
+
+        return ConfigManager
+    if name in {"ModelMappingSchema", "ModelMappingTargetSchema"}:
+        from .model_mapping_config import ModelMappingSchema, ModelMappingTargetSchema
+
+        return {"ModelMappingSchema": ModelMappingSchema, "ModelMappingTargetSchema": ModelMappingTargetSchema}[name]
     if name == "ProviderRuntimeFactory":
         from .provider_runtime_factory import ProviderRuntimeFactory
 

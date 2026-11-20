@@ -18,3 +18,11 @@ frontend/.vite/
 frontend/.review-artifacts/
 *.tsbuildinfo
 /tmp/
+.cloudflare/
+.venv-workers/
+python_modules/
+workers/src/
+workers/hooks/
+workers/static/app/
+workers/static/static/
+.dev.vars*

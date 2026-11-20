@@ -24,6 +24,7 @@ from ..proxy_core import (
     is_terminal_chunk,
     should_emit_terminal_chunk,
 )
+from ..proxy_core.errors import build_stream_error_chunks
 from ..proxy_core.usage import (
     USAGE_STATUS_UNKNOWN,
     create_usage_meta,
@@ -1210,56 +1211,13 @@ class ProxyResponseBuilder:
         response_id: str,
         response_model: str,
     ) -> list[DownstreamChunk]:
-        normalized_target_format = str(downstream_target_format or "").strip().lower()
-        if normalized_target_format == "claude_chat":
-            return [
-                DownstreamChunk(
-                    kind="json",
-                    event="error",
-                    payload={
-                        "type": "error",
-                        "error": {
-                            "type": error_type,
-                            "message": message,
-                        },
-                    },
-                )
-            ]
-        if normalized_target_format == "openai_responses":
-            return [
-                DownstreamChunk(
-                    kind="json",
-                    event="response.failed",
-                    payload={
-                        "type": "response.failed",
-                        "response": {
-                            "id": response_id,
-                            "object": "response",
-                            "status": "failed",
-                            "error": {
-                                "message": message,
-                                "type": error_type,
-                                "code": error_type,
-                            },
-                            "model": response_model,
-                        },
-                    },
-                )
-            ]
-        return [
-            DownstreamChunk(
-                kind="json",
-                payload={
-                    "error": {
-                        "message": message,
-                        "type": error_type,
-                        "param": None,
-                        "code": error_type,
-                    }
-                },
-            ),
-            DownstreamChunk(kind="done"),
-        ]
+        return build_stream_error_chunks(
+            downstream_target_format=downstream_target_format,
+            message=message,
+            error_type=error_type,
+            response_id=response_id,
+            response_model=response_model,
+        )
 
     @classmethod
     def _summarize_upstream_error(cls, raw_body: bytes, content_type: str) -> str | None:

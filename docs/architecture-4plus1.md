@@ -1489,6 +1489,32 @@ Client / Agent / IDE
         +--> optional HTTP / HTTPS / SOCKS proxy --> remote SSH / SFTP --> Agent configuration files
 ```
 
+### 5.1 Cloudflare Workers 部署
+
+仓库同时提供基于 Python Workers 的独立部署入口。该形态复用 translators、proxy_core、上游请求构建、Hook 接口和 Vue 静态资源，但运行环境、状态存储和进程模型与单机版不同：
+
+- Worker 入口由 `workers/entry.py` 提供，`WorkersApplication` 负责 `/v1/*` 数据面、同源管理 API 和页面路由。
+- Flask 管理面运行在 `workers.wsgi` 适配器中；数据面直接使用原生 async fetch 与 Streams。
+- Provider 配置、用户、API Key、模型映射、OAuth 元数据、请求日志和日统计保存在 D1。
+- API Key 并发和窗口额度、Auth Group inflight 与游标、模型映射粘滞目标、OAuth Token 刷新状态按业务实体分片到 Durable Objects。
+- LLM 数据记录写入 R2；Vue 构建资源由 Workers Static Assets 提供。
+- 进程内 gevent、原生线程、SQLite 文件、本地 YAML 写回和 Agent 本机/SSH 功能不适用于 Workers 形态。
+- OAuth 账号和下游凭据不写入静态资源或普通日志；管理员会话持久化于 D1。
+- 部署、验证和平台边界见 `docs/cloudflare-workers.md`。
+
+```text
+Client
+  |
+  v
+Cloudflare Worker (Python + Pyodide)
+  |-- Flask management routes ------> D1 (configuration, logs, statistics)
+  |-- native data-plane routes -----> Durable Objects (shared coordination)
+  |-- translator / encoder
+  +-- fetch -----------------------> upstream providers / OAuth endpoints
+  +-- R2 --------------------------> LLM records
+  +-- Static Assets ---------------> Vue admin frontend
+```
+
 ## 6. Scenarios
 
 ### 6.1 OpenAI Chat Downstream -> Responses Upstream

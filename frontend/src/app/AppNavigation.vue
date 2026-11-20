@@ -13,7 +13,7 @@ const theme = useTheme()
 const router = useRouter()
 const route = useRoute()
 const initial = computed(() =>
-  Array.from(session.context?.username.trim() || 'A')[0]!.toUpperCase(),
+  Array.from(session.context?.username?.trim() || 'A')[0]!.toUpperCase(),
 )
 const navigation = computed(() =>
   [
@@ -26,7 +26,12 @@ const navigation = computed(() =>
       show: true,
     },
     { path: '/api-keys', label: 'API Key', icon: 'key', show: true },
-    { path: '/agents', label: 'Agent 配置', icon: 'terminal', show: true },
+    {
+      path: '/agents',
+      label: 'Agent 配置',
+      icon: 'terminal',
+      show: Boolean(session.context?.capabilities.agents),
+    },
     { path: '/users', label: '用户', icon: 'users', show: true },
     { path: '/statistics', label: '统计', icon: 'chart', show: true },
     { path: '/settings', label: '设置', icon: 'settings', show: true },

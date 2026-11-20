@@ -1,0 +1,14 @@
+{
+  "name": "llm-proxy-workers",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync": "uv run --with workers-py python -I scripts/sync_workers.py",
+    "build": "npm run sync && cf build",
+    "deploy": "npm run sync && cf deploy"
+  },
+  "devDependencies": {
+    "cf": "1.0.0-rc.1",
+    "wrangler": "4.164.0"
+  }
+}

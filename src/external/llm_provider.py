@@ -34,9 +34,11 @@ class LLMProvider:
     force_upstream_stream: bool = False
     safe_desensitization_enabled: bool = False
     hook: HookModule | None = None
+    extra_headers: tuple[tuple[str, str], ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "model_list", tuple(self.model_list))
+        object.__setattr__(self, "extra_headers", tuple(self.extra_headers))
         normalized_target_formats = resolve_provider_target_formats(self.target_formats)
         object.__setattr__(self, "target_formats", normalized_target_formats)
 

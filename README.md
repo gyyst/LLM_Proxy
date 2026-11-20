@@ -151,6 +151,7 @@ curl http://127.0.0.1:8080/v1/chat/completions \
 | 文档 | 内容 |
 | --- | --- |
 | [完整使用手册](docs/user-guide.md) | Provider、Auth Group、OAuth、Hook、安全脱敏与配置参考 |
+| [Cloudflare Workers 部署](docs/cloudflare-workers.md) | Workers 架构、D1/Durable Objects/R2、部署、验证与平台边界 |
 | [Agent 配置与兼容性](docs/agent-configuration.md) | Agent 声明式扩展、文件格式、路径、SSH 与参数说明 |
 | [Provider 模型测试](docs/provider-model-testing.md) | 模型测试链路、指标口径与行为边界 |
 | [统计设计](docs/statistics-design.md) | 请求观测、统计口径、缓存与性能指标 |

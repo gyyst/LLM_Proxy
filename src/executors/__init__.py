@@ -1,9 +1,11 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""Upstream executors and registry exports."""
+"""上游执行器契约与按需 HTTP 实现。"""
+
+from typing import TYPE_CHECKING
 
 from .contracts import Executor, OpenedUpstreamResponse
-from .registry import ExecutorRegistry, HttpExecutor, build_default_executor_registry
+
+if TYPE_CHECKING:
+    from .registry import ExecutorRegistry, HttpExecutor, build_default_executor_registry
 
 __all__ = [
     "Executor",
@@ -12,3 +14,11 @@ __all__ = [
     "OpenedUpstreamResponse",
     "build_default_executor_registry",
 ]
+
+
+def __getattr__(name: str):
+    if name in {"ExecutorRegistry", "HttpExecutor", "build_default_executor_registry"}:
+        from . import registry
+
+        return getattr(registry, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
