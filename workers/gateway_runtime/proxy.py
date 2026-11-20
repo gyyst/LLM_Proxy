@@ -118,7 +118,7 @@ class WorkersProxy:
         last_error = "No upstream provider available"
         for target_attempt, provider in enumerate(config.providers):
             translator = self.translators.get(provider.source_format, target)
-            upstream_model = requested_model_without_prefix(config.request_model, provider.name)
+            upstream_model = resolve_upstream_model(config, provider.name)
             upstream_body = copy.deepcopy(original)
             upstream_body["model"] = upstream_model
             privacy_context = None
@@ -220,13 +220,13 @@ class WorkersProxy:
         headers = request_headers(request)
         if provider.safe_desensitization_enabled:
             headers = self.privacy.sanitize_request_headers(headers)
-        headers["Content-Type"] = "application/json"
+        headers = merge_http_headers(headers, {"Content-Type": "application/json"})
         if provider.extra_headers:
             headers = merge_http_headers(headers, dict(provider.extra_headers))
         if auth:
             return merge_http_headers(headers, auth.get("headers") or {})
         if provider.api_key:
-            headers["Authorization"] = f"Bearer {provider.api_key}"
+            headers = merge_http_headers(headers, {"Authorization": f"Bearer {provider.api_key}"})
         return headers
 
     async def _nonstream_result(
@@ -449,6 +449,12 @@ async def _json_body(request: Any) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise HttpError("Request body must be a JSON object", 400, "invalid_json")
     return dict(value)
+
+
+def resolve_upstream_model(config: Any, provider_name: str) -> str:
+    """解析 Provider 实际使用的上游模型名；映射路由使用命中的目标模型。"""
+    routed_model = config.targets_by_provider.get(provider_name) or config.request_model
+    return requested_model_without_prefix(routed_model, provider_name)
 
 
 def requested_model_without_prefix(model: str, provider: str) -> str:
