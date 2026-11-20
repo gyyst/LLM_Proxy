@@ -12,8 +12,10 @@ from pathlib import Path
 from typing import Any
 
 from gateway_runtime.http import (
+    DEFAULT_USER_AGENT,
     HttpError,
     close_response,
+    compact_error_detail,
     iter_response_bytes,
     json_response,
     open_upstream,
@@ -221,6 +223,8 @@ class WorkersProxy:
         if provider.safe_desensitization_enabled:
             headers = self.privacy.sanitize_request_headers(headers)
         headers = merge_http_headers(headers, {"Content-Type": "application/json"})
+        if not any(name.lower() == "user-agent" for name in headers):
+            headers = merge_http_headers(headers, {"User-Agent": DEFAULT_USER_AGENT})
         if provider.extra_headers:
             headers = merge_http_headers(headers, dict(provider.extra_headers))
         if auth:
@@ -469,9 +473,12 @@ def _error(target: str, message: str, status: int = 502, code: str = "upstream_e
 
 
 def _error_message(raw: str) -> str:
+    text = raw.strip()
+    if "<html" in text.lower():
+        return f"Upstream error page: {compact_error_detail(text)}"
     try:
-        body = json.loads(raw)
+        body = json.loads(text)
         error = body.get("error", body) if isinstance(body, dict) else body
         return str(error.get("message") if isinstance(error, dict) else error)[:1000]
     except (ValueError, AttributeError):
-        return raw[:1000] or "Upstream request failed"
+        return text[:1000] or "Upstream request failed"

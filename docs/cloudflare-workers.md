@@ -130,6 +130,7 @@ Hook 仍从 `hooks/` 相对路径加载，导出 `Hook` 类并支持 `header_hoo
 ## Cloudflare 与工具边界
 
 - `workers.dev` 上的 Worker 访问另一个 Cloudflare 托管域名的 Worker 可能返回 `1042`，不能用公网 URL 做 Worker 间回环验证；使用 Service Binding 或非 Cloudflare 上游。
+- 上游域名由 Cloudflare 代理并配置访问限制时，Worker 子请求可能收到 `429` / `1015` 或 Cloudflare 访问拒绝页。使用 GeoDNS 的上游可能对中国区返回源站地址、对境外返回 Cloudflare 代理地址，因此本机可用的上游不保证在 Worker 中可用；此类上游需要使用可公开访问的端点，或通过模型映射切换到可用目标。
 - `cf` 的项目配置与 `pywrangler` 的 Python 依赖管理是两层。首次部署在 `npm run sync` 中原子地调用 Workers Runtime SDK 的锁文件和安装实现。
 - Worker 内存、CPU、子请求、D1 和 Durable Object 调用受 Cloudflare 计划限制；长流本身可继续，但计算 CPU 和存储调用仍受限。
 - 不支持 `server.host` / `server.port` 的进程监听语义；设置页中的监听字段在 Workers 部署中没有运行时效果。

@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from flask import Flask, Response, jsonify, request
-from gateway_runtime.http import HttpError
+from gateway_runtime.http import DEFAULT_USER_AGENT, HttpError, compact_error_detail
 from gateway_runtime.model_test import build_model_test_request, model_test_failure, model_test_result
 from gateway_runtime.services import (
     GatewayServices,
@@ -1472,7 +1472,11 @@ async def _test_upstream_model(provider: dict[str, Any], model: str, env: Any) -
     started = time.perf_counter()
     source = str(provider.get("source_format") or "openai_chat")
     body = build_model_test_request(source, model)
-    headers = {"Content-Type": "application/json", "Accept": "application/json"}
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": DEFAULT_USER_AGENT,
+    }
     auth_entry = _find_auth_entry(provider)
     if auth_entry:
         headers.update(auth_entry.get("headers") or {})
@@ -1484,7 +1488,7 @@ async def _test_upstream_model(provider: dict[str, Any], model: str, env: Any) -
         endpoint = _upstream_api_endpoint(str(provider.get("api") or ""), source)
         response = await open_upstream(endpoint, headers, body, env)
         if response.status >= 400:
-            detail = (await response.text()).strip()[:300]
+            detail = compact_error_detail(await response.text())
             return model_test_failure(
                 model,
                 f"HTTP {response.status}{f': {detail}' if detail else ''}",
@@ -1518,7 +1522,7 @@ async def _fetch_upstream(provider: dict[str, Any], env: Any) -> dict[str, Any]:
 
     api = str(provider.get("api") or "").strip()
     candidates = _model_endpoint_candidates(api)
-    headers = {"Accept": "application/json"}
+    headers = {"Accept": "application/json", "User-Agent": DEFAULT_USER_AGENT}
     entry = _find_auth_entry(provider)
     if entry:
         headers.update(entry.get("headers") or {})
@@ -1529,7 +1533,7 @@ async def _fetch_upstream(provider: dict[str, Any], env: Any) -> dict[str, Any]:
         try:
             response = await get_upstream(url, headers, env)
             if response.status >= 400:
-                detail = (await response.text()).strip()[:200]
+                detail = compact_error_detail(await response.text(), 200)
                 errors.append(f"{url} returned HTTP {response.status}{f': {detail}' if detail else ''}")
                 continue
             raw = await response.text()

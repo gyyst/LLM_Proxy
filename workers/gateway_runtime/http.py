@@ -14,6 +14,8 @@ from pyodide.ffi import create_proxy, run_sync, to_js
 
 from workers import Response, fetch
 
+DEFAULT_USER_AGENT = "LLM-Proxy/3.0"
+
 
 class HttpError(Exception):
     """带 HTTP 状态的业务错误。"""
@@ -58,7 +60,7 @@ async def read_json(request: Any, *, max_bytes: int = 16 * 1024 * 1024) -> dict[
 
 
 def request_headers(request: Any) -> dict[str, str]:
-    """复制 headers，移除下游认证与 hop-by-hop 字段。"""
+    """复制 headers，移除下游认证、Cloudflare 内部字段与 hop-by-hop 字段。"""
     excluded = {
         "authorization",
         "x-api-key",
@@ -73,8 +75,38 @@ def request_headers(request: Any) -> dict[str, str]:
         "transfer-encoding",
         "upgrade",
         "content-length",
+        "cdn-loop",
+        "x-forwarded-for",
+        "x-forwarded-host",
+        "x-forwarded-port",
+        "x-forwarded-proto",
+        "x-real-ip",
+        "forwarded",
+        "true-client-ip",
     }
-    return {str(key): str(value) for key, value in request.headers.items() if str(key).lower() not in excluded}
+    return {
+        str(key): str(value)
+        for key, value in request.headers.items()
+        if str(key).lower() not in excluded and not str(key).lower().startswith("cf-")
+    }
+
+
+def compact_error_detail(raw: str, limit: int = 300) -> str:
+    """把上游错误正文压缩为适合展示的短文本。"""
+    text = raw.strip()
+    if "<html" in text.lower():
+        title = _html_title(text)
+        return (title or "Upstream returned an HTML error page")[:limit]
+    return text[:limit]
+
+
+def _html_title(html: str) -> str:
+    lowered = html.lower()
+    start = lowered.find("<title>")
+    end = lowered.find("</title>", start + 7) if start >= 0 else -1
+    if end < 0:
+        return ""
+    return " ".join(html[start + 7 : end].split())
 
 
 def response_headers(headers: Any, *, stream: bool = False) -> dict[str, str]:
